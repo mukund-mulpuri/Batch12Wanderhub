@@ -75,7 +75,6 @@ const bookingSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Generate booking reference before saving
 bookingSchema.pre('save', function(next) {
   if (!this.bookingReference) {
     this.bookingReference = 'AWH' + Date.now() + Math.random().toString(36).substr(2, 5).toUpperCase();
@@ -83,7 +82,6 @@ bookingSchema.pre('save', function(next) {
   next();
 });
 
-// Indexes for better query performance
 bookingSchema.index({ user: 1 });
 bookingSchema.index({ hotel: 1 });
 bookingSchema.index({ status: 1 });

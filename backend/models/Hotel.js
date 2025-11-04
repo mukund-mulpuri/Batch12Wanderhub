@@ -134,7 +134,6 @@ const hotelSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Indexes for better query performance
 hotelSchema.index({ name: 1 });
 hotelSchema.index({ location: 1 });
 hotelSchema.index({ category: 1 });

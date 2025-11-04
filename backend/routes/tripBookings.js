@@ -2,14 +2,14 @@ import express from 'express';
 import TripBooking from '../models/TripBooking.js';
 import Destination from '../models/Destination.js';
 import Hotel from '../models/Hotel.js';
-import { protect } from '../middleware/auth.js';
+import auth from '../middleware/auth.js';
 
 const router = express.Router();
 
 // @desc    Create a new trip booking
 // @route   POST /api/trip-bookings
 // @access  Private
-router.post('/', protect, async (req, res) => {
+router.post('/', auth, async (req, res) => {
   try {
     const {
       tripDetails,
@@ -17,8 +17,10 @@ router.post('/', protect, async (req, res) => {
       paymentMethod = 'card'
     } = req.body;
 
+    const normalizedTripDetails = sanitizeTripDetails(tripDetails);
+
     // Validate required fields
-    if (!tripDetails.destination || !tripDetails.startDate || !tripDetails.endDate || !tripDetails.travelers) {
+    if (!normalizedTripDetails.destination || !normalizedTripDetails.startDate || !normalizedTripDetails.endDate || !normalizedTripDetails.travelers) {
       return res.status(400).json({
         success: false,
         message: 'Missing required trip details'
@@ -26,8 +28,8 @@ router.post('/', protect, async (req, res) => {
     }
 
     // Calculate trip duration
-    const startDate = new Date(tripDetails.startDate);
-    const endDate = new Date(tripDetails.endDate);
+    const startDate = new Date(normalizedTripDetails.startDate);
+    const endDate = new Date(normalizedTripDetails.endDate);
     const duration = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
 
     if (duration <= 0) {
@@ -39,26 +41,27 @@ router.post('/', protect, async (req, res) => {
 
     // Find destination details
     let destinationDetails = null;
-    if (tripDetails.destination) {
+    if (normalizedTripDetails.destination) {
       destinationDetails = await Destination.findOne({
         $or: [
-          { name: { $regex: tripDetails.destination, $options: 'i' } },
-          { location: { $regex: tripDetails.destination, $options: 'i' } }
+          { name: { $regex: normalizedTripDetails.destination, $options: 'i' } },
+          { location: { $regex: normalizedTripDetails.destination, $options: 'i' } }
         ]
       });
     }
 
     // Generate sample itinerary based on destination and duration
-    const itinerary = await generateItinerary(destinationDetails, duration, tripDetails);
+    const itinerary = await generateItinerary(destinationDetails, duration, normalizedTripDetails);
 
     // Calculate pricing based on budget and travelers
-    const totalAmount = calculateTripCost(tripDetails, duration, itinerary);
+    const totalAmount = calculateTripCost(normalizedTripDetails, duration, itinerary);
 
     // Create booking
     const booking = new TripBooking({
       user: req.user._id,
       tripDetails: {
-        ...tripDetails,
+        ...normalizedTripDetails,
+        destination: destinationDetails?.name || normalizedTripDetails.destination,
         duration,
         destinationId: destinationDetails?._id
       },
@@ -107,7 +110,7 @@ router.post('/', protect, async (req, res) => {
 // @desc    Get user's trip bookings
 // @route   GET /api/trip-bookings
 // @access  Private
-router.get('/', protect, async (req, res) => {
+router.get('/', auth, async (req, res) => {
   try {
     const { status, limit = 10, page = 1 } = req.query;
     
@@ -149,7 +152,7 @@ router.get('/', protect, async (req, res) => {
 // @desc    Get specific trip booking
 // @route   GET /api/trip-bookings/:bookingId
 // @access  Private
-router.get('/:bookingId', protect, async (req, res) => {
+router.get('/:bookingId', auth, async (req, res) => {
   try {
     const booking = await TripBooking.findOne({
       bookingId: req.params.bookingId,
@@ -183,7 +186,7 @@ router.get('/:bookingId', protect, async (req, res) => {
 // @desc    Cancel trip booking
 // @route   PUT /api/trip-bookings/:bookingId/cancel
 // @access  Private
-router.put('/:bookingId/cancel', protect, async (req, res) => {
+router.put('/:bookingId/cancel', auth, async (req, res) => {
   try {
     const booking = await TripBooking.findOne({
       bookingId: req.params.bookingId,
@@ -226,7 +229,7 @@ router.put('/:bookingId/cancel', protect, async (req, res) => {
 // @desc    Add feedback to trip
 // @route   POST /api/trip-bookings/:bookingId/feedback
 // @access  Private
-router.post('/:bookingId/feedback', protect, async (req, res) => {
+router.post('/:bookingId/feedback', auth, async (req, res) => {
   try {
     const { rating, comment, images } = req.body;
 
@@ -338,9 +341,9 @@ function generateMeals(budget) {
   const costs = mealCosts[budget] || mealCosts['mid-range'];
 
   return [
-    { type: 'Breakfast', location: 'Hotel Restaurant', cost: costs.breakfast },
-    { type: 'Lunch', location: 'Local Restaurant', cost: costs.lunch },
-    { type: 'Dinner', location: 'Fine Dining', cost: costs.dinner }
+    { mealType: 'Breakfast', location: 'Hotel Restaurant', cost: costs.breakfast },
+    { mealType: 'Lunch', location: 'Local Restaurant', cost: costs.lunch },
+    { mealType: 'Dinner', location: 'Fine Dining', cost: costs.dinner }
   ];
 }
 
@@ -403,6 +406,26 @@ function calculateTripCost(tripDetails, duration, itinerary) {
   });
   
   return Math.round(total);
+}
+
+function sanitizeTripDetails(details = {}) {
+  const cleaned = { ...details };
+
+  if (!cleaned.budget) {
+    cleaned.budget = 'mid-range';
+  }
+
+  ['accommodation', 'transportation', 'specialRequests'].forEach((key) => {
+    if (cleaned[key] === '' || cleaned[key] === null) {
+      delete cleaned[key];
+    }
+  });
+
+  if (Array.isArray(cleaned.interests)) {
+    cleaned.interests = cleaned.interests.filter(Boolean);
+  }
+
+  return cleaned;
 }
 
 export default router;

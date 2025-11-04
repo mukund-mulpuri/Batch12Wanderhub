@@ -109,7 +109,7 @@ const destinationSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Indexes for better query performance
+
 destinationSchema.index({ name: 1 });
 destinationSchema.index({ category: 1 });
 destinationSchema.index({ location: 1 });

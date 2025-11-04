@@ -31,7 +31,7 @@ const tripBookingSchema = new mongoose.Schema({
     },
     duration: {
       type: Number,
-      required: true // in days
+      required: true 
     },
     travelers: {
       type: Number,
@@ -75,8 +75,14 @@ const tripBookingSchema = new mongoose.Schema({
       cost: Number
     },
     meals: [{
-      type: String,
-      location: String,
+      mealType: {
+        type: String,
+        trim: true
+      },
+      location: {
+        type: String,
+        trim: true
+      },
       cost: Number
     }],
     transportation: {
@@ -178,14 +184,11 @@ const tripBookingSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Indexes
-tripBookingSchema.index({ bookingId: 1 });
 tripBookingSchema.index({ user: 1 });
 tripBookingSchema.index({ 'tripDetails.startDate': 1 });
 tripBookingSchema.index({ bookingStatus: 1 });
 tripBookingSchema.index({ 'paymentDetails.paymentStatus': 1 });
 
-// Virtual for trip duration in days
 tripBookingSchema.virtual('tripDuration').get(function() {
   if (this.tripDetails.startDate && this.tripDetails.endDate) {
     const diffTime = Math.abs(this.tripDetails.endDate - this.tripDetails.startDate);
@@ -194,11 +197,10 @@ tripBookingSchema.virtual('tripDuration').get(function() {
   return 0;
 });
 
-// Method to calculate total cost
 tripBookingSchema.methods.calculateTotalCost = function() {
   let total = 0;
   
-  // Add itinerary costs
+
   this.itinerary.forEach(day => {
     day.activities.forEach(activity => {
       total += activity.cost || 0;
@@ -214,7 +216,7 @@ tripBookingSchema.methods.calculateTotalCost = function() {
     }
   });
   
-  // Add hotel booking costs
+  
   this.hotelBookings.forEach(booking => {
     total += booking.totalCost || 0;
   });
@@ -222,7 +224,6 @@ tripBookingSchema.methods.calculateTotalCost = function() {
   return total;
 };
 
-// Method to generate booking confirmation
 tripBookingSchema.methods.generateConfirmation = function() {
   return {
     bookingId: this.bookingId,
