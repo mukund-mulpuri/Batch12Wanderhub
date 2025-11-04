@@ -203,7 +203,7 @@ const TripPlanner = () => {
       const userData = JSON.parse(user);
       
       // Make API call to book trip
-      const response = await fetch('http://localhost:3001/api/trip-bookings', {
+      const response = await fetch('https://batch12wanderhub.onrender.com/api/trip-bookings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

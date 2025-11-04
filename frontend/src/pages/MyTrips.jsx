@@ -44,7 +44,7 @@ const MyTrips = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:3001/api/trip-bookings', {
+      const response = await fetch('https://batch12wanderhub.onrender.com/api/trip-bookings', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },

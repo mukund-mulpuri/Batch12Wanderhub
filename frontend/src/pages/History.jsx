@@ -29,7 +29,7 @@ const History = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:3001/api/trip-bookings?status=completed', {
+const response = await fetch('https://batch12wanderhub.onrender.com/api/trip-bookings?status=completed', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },

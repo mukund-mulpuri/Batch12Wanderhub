@@ -33,7 +33,7 @@ const Destinations = () => {
   useEffect(() => {
     let filtered = staticDestinations;
 
-    // Filter by search query
+  
     if (searchQuery) {
       filtered = filtered.filter(dest =>
         dest.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
